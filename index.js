@@ -46,11 +46,36 @@ async function run() {
             // bad way to aggregate data
             for (const room of result) {
                 const roomId = room._id.toString();
-                const reviews = await reviewsCollection.find({roomId}).toArray();
+                const reviews = await reviewsCollection.find({ roomId }).toArray();
                 room.reviews = reviews;
             }
 
             res.send(result);
+        });
+
+        // http://localhost:3000/rooms/top-rated
+        app.get('/rooms/top-rated', async (req, res) => {
+            const result = await roomsCollection.find().toArray();
+
+            // bad way to aggregate data
+            for (const room of result) {
+                const roomId = room._id.toString();
+                const reviews = await reviewsCollection.find({ roomId }).toArray();
+                room.reviews = reviews;
+                // calculate average rating
+                if (reviews.length > 0) {
+                    const total = reviews.reduce((sum, r) => sum + r.rating, 0);
+                    room.averageRating = total / reviews.length;
+                } else {
+                    room.averageRating = 0;
+                }
+            }
+            // sort by average rating, descending-topRated ,can not use sort in mongodb because averageRating is not stored in db
+            const sorted = result.sort((a, b) => b.averageRating - a.averageRating);
+
+            const finalResult = sorted.slice(0, 6);
+
+            res.send(finalResult);
         });
 
         // Send a ping to confirm a successful connection
