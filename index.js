@@ -106,6 +106,27 @@ async function run() {
             res.send(room);
         });
 
+        app.patch('/rooms/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedRoom = req.body;
+            const updateDoc = {
+                $set: {
+                    availability: updatedRoom.availability,
+                    customerDetails: {
+                        customer_email: updatedRoom.customer_email,
+                        customer_name: updatedRoom.customer_name,
+                        checkInDate: updatedRoom.checkInDate,
+                        checkOutDate: updatedRoom.checkOutDate,
+                    },
+                    disabledDates: updatedRoom.disabledDates,
+                },
+            };
+            const result = await roomsCollection.updateOne(filter, updateDoc);
+            console.log(result);
+            res.send(result);
+        });
+
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
