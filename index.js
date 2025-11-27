@@ -34,6 +34,7 @@ async function run() {
         const roomsCollection = client.db('royalVille').collection('rooms');
         const reviewsCollection = client.db('royalVille').collection('reviews');
 
+        // http://localhost:3000/rooms
         app.get('/rooms', async (req, res) => {
             const email = req.query.email;
             const query = {};
@@ -72,11 +73,22 @@ async function run() {
             }
             // sort by average rating, descending-topRated ,can not use sort in mongodb because averageRating is not stored in db
             const sorted = result.sort((a, b) => b.averageRating - a.averageRating);
-
             const finalResult = sorted.slice(0, 6);
 
             res.send(finalResult);
         });
+
+        // http://localhost:3000/rooms/692488a0e12a55856d20a9ea
+        app.get('/rooms/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const room = await roomsCollection.findOne(query);
+            const roomId = id.toString()
+            const reviews = await reviewsCollection.find({ roomId: roomId }).toArray();
+            room.reviews = reviews;
+            res.send(room);
+        });
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
