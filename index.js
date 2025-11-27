@@ -1,9 +1,9 @@
+require('dotenv').config()
 const express = require('express');
 const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-require('dotenv').config()
 
 // middleware
 app.use(cors())
@@ -29,19 +29,36 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const roomsCollection = client.db('royalVille').collection('rooms');
         const reviewsCollection = client.db('royalVille').collection('reviews');
 
         // http://localhost:3000/rooms
+        // http://localhost:3000/rooms?min=2&max=222&sort=asc
+        // http://localhost:3000/sort=asc
         app.get('/rooms', async (req, res) => {
             const email = req.query.email;
-            const query = {};
+            let query = {};
             if (email) {
                 query.customer_email = email;
             }
-            const cursor = roomsCollection.find(query);
+
+            const { min, max } = req.query;
+            if (min && max) {
+                query = { pricePerNight: { $gte: parseInt(min), $lte: parseInt(max) } };
+            }
+
+            const sortOrder = req.query.sort;
+
+            const sortOptions = {};
+            if (sortOrder === 'asc') {
+                sortOptions.pricePerNight = 1; // Ascending order
+            } else if (sortOrder === 'desc') {
+                sortOptions.pricePerNight = -1; // Descending order
+            }
+
+            const cursor = roomsCollection.find(query).sort(sortOptions);
             const result = await cursor.toArray();
 
             // bad way to aggregate data
@@ -91,8 +108,8 @@ async function run() {
 
 
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
