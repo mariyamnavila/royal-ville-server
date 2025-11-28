@@ -37,16 +37,19 @@ async function run() {
         // http://localhost:3000/rooms
         // http://localhost:3000/rooms?min=2&max=222&sort=asc
         // http://localhost:3000/sort=asc
+        // http://localhost:3000/rooms?email=bibimariyamnavila@gmail.com
         app.get('/rooms', async (req, res) => {
             const email = req.query.email;
+            const { min, max } = req.query;
+
             let query = {};
+
             if (email) {
-                query.customer_email = email;
+                query['customerDetails.customer_email'] = email;
             }
 
-            const { min, max } = req.query;
             if (min && max) {
-                query = { pricePerNight: { $gte: parseInt(min), $lte: parseInt(max) } };
+                query.pricePerNight = { $gte: parseInt(min), $lte: parseInt(max) };
             }
 
             const sortOrder = req.query.sort;
@@ -113,19 +116,23 @@ async function run() {
             const updateDoc = {
                 $set: {
                     availability: updatedRoom.availability,
-                    customerDetails: {
-                        customer_email: updatedRoom.customer_email,
-                        customer_name: updatedRoom.customer_name,
-                        checkInDate: updatedRoom.checkInDate,
-                        checkOutDate: updatedRoom.checkOutDate,
-                    },
+                    customerDetails: [
+                        {
+                            customer_email: updatedRoom.customer_email,
+                            customer_name: updatedRoom.customer_name,
+                            checkInDate: updatedRoom.checkInDate,
+                            checkOutDate: updatedRoom.checkOutDate,
+                            specificBookedDates: updatedRoom.specificBookedDates,
+                        }
+                    ],
                     disabledDates: updatedRoom.disabledDates,
                 },
             };
             const result = await roomsCollection.updateOne(filter, updateDoc);
-            console.log(result);
             res.send(result);
         });
+
+        
 
 
         // Send a ping to confirm a successful connection
