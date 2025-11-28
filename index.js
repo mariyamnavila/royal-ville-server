@@ -33,6 +33,7 @@ async function run() {
 
         const roomsCollection = client.db('royalVille').collection('rooms');
         const reviewsCollection = client.db('royalVille').collection('reviews');
+        const bookingCollection = client.db('royalVille').collection('bookings');
 
         // http://localhost:3000/rooms
         // http://localhost:3000/rooms?min=2&max=222&sort=asc
@@ -116,15 +117,15 @@ async function run() {
             const updateDoc = {
                 $set: {
                     availability: updatedRoom.availability,
-                    customerDetails: [
-                        {
-                            customer_email: updatedRoom.customer_email,
-                            customer_name: updatedRoom.customer_name,
-                            checkInDate: updatedRoom.checkInDate,
-                            checkOutDate: updatedRoom.checkOutDate,
-                            specificBookedDates: updatedRoom.specificBookedDates,
-                        }
-                    ],
+                    // customerDetails: [
+                    //     {
+                    //         customer_email: updatedRoom.customer_email,
+                    //         customer_name: updatedRoom.customer_name,
+                    //         checkInDate: updatedRoom.checkInDate,
+                    //         checkOutDate: updatedRoom.checkOutDate,
+                    //         specificBookedDates: updatedRoom.specificBookedDates,
+                    //     }
+                    // ],
                     disabledDates: updatedRoom.disabledDates,
                 },
             };
@@ -132,8 +133,14 @@ async function run() {
             res.send(result);
         });
 
-        
 
+
+        app.post('/bookings', async (req, res) => {
+            const booking = req.body;
+            // const roomId = booking.roomId;
+            const result = await bookingCollection.insertOne(booking);
+            res.send(result);
+        });
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
