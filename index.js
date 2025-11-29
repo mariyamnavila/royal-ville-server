@@ -39,6 +39,7 @@ async function run() {
         // http://localhost:3000/rooms?min=2&max=222&sort=asc
         // http://localhost:3000/sort=asc
         // http://localhost:3000/rooms?email=bibimariyamnavila@gmail.com
+        // http://localhost:3000/rooms?userName=Owen%20Sanchez
         app.get('/rooms', async (req, res) => {
             const email = req.query.email;
             const userName = req.query.userName;
@@ -161,6 +162,13 @@ async function run() {
             const booking = req.body;
             // const roomId = booking.roomId;
             const result = await bookingCollection.insertOne(booking);
+            res.send(result);
+        });
+
+        app.delete('/bookings/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await bookingCollection.deleteOne(query);
             res.send(result);
         });
 
