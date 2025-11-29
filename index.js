@@ -41,13 +41,10 @@ async function run() {
         // http://localhost:3000/rooms?email=bibimariyamnavila@gmail.com
         app.get('/rooms', async (req, res) => {
             const email = req.query.email;
+            const userName = req.query.userName;
             const { min, max } = req.query;
 
             let query = {};
-
-            if (email) {
-                query['customerDetails.customer_email'] = email;
-            }
 
             if (min && max) {
                 query.pricePerNight = { $gte: parseInt(min), $lte: parseInt(max) };
@@ -62,14 +59,34 @@ async function run() {
                 sortOptions.pricePerNight = -1; // Descending order
             }
 
+            // if (email) {
+            //     query['customersDetails.customer_email'] = email;
+            // }
+            // if (userName) {
+            //     query['reviews.username'] = userName;
+            // }
+
             const cursor = roomsCollection.find(query).sort(sortOptions);
-            const result = await cursor.toArray();
+            let result = await cursor.toArray();
 
             // bad way to aggregate data
             for (const room of result) {
                 const roomId = room._id.toString();
-                const reviews = await reviewsCollection.find({ roomId }).toArray();
-                room.reviews = reviews;
+                room.reviews = await reviewsCollection.find({ roomId }).toArray();
+                room.customersDetails = await bookingCollection.find({ roomId }).toArray();
+
+            }
+
+            if (email) {
+                result = result.filter(room =>
+                    room.customersDetails.some(details => details.customer_email === email)
+                );
+            }
+
+            if (userName) {
+                result = result.filter(room =>
+                    room.reviews.some(details => details.username === userName)
+                );
             }
 
             res.send(result);
@@ -107,6 +124,8 @@ async function run() {
             const roomId = id.toString()
             const reviews = await reviewsCollection.find({ roomId: roomId }).toArray();
             room.reviews = reviews;
+            const bookings = await bookingCollection.find({ roomId }).toArray();
+            room.customersDetails = bookings;
             res.send(room);
         });
 
@@ -133,7 +152,10 @@ async function run() {
             res.send(result);
         });
 
-
+        app.get('/bookings', async (req, res) => {
+            const result = await bookingCollection.find().toArray();
+            res.send(result);
+        })
 
         app.post('/bookings', async (req, res) => {
             const booking = req.body;
