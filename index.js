@@ -153,6 +153,17 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/reviews', async (req, res) => {
+            const result = await reviewsCollection.find().toArray();
+            res.send(result)
+        })
+
+        app.post('/reviews', async (req, res) => {
+            const review = req.body;
+            const result = await reviewsCollection.insertOne(review)
+            res.send(result)
+        })
+
         app.get('/bookings', async (req, res) => {
             const result = await bookingCollection.find().toArray();
             res.send(result);
@@ -172,11 +183,10 @@ async function run() {
             res.send(result);
         });
 
-        app.patch('/bookings/:id',async (req,res) => {
+        app.patch('/bookings/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const updatedBooking = req.body;
-            console.log(updatedBooking);
             const updateDoc = {
                 $set: {
                     checkInDate: updatedBooking.checkInDate,
