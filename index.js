@@ -2,19 +2,25 @@ require('dotenv').config()
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const port = process.env.PORT || 3000;
+const admin = require("firebase-admin");
 
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
+
+const port = process.env.PORT || 3000;
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware
 app.use(cors())
 app.use(express.json())
 
-// royal-ville
-// Xhjk4bah5U6ZDegv
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+
 
 // MongoDB connection
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster033.bpxhzqh.mongodb.net/?appName=Cluster033`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -25,6 +31,29 @@ const client = new MongoClient(uri, {
         deprecationErrors: true,
     }
 });
+
+const verifyFirebaseToken = async (req, res, next) => {
+    const authHeader = req.headers?.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).send({ message: 'unauthorized access' })
+    }
+    const token = authHeader.split(' ')[1]
+
+    try {
+        const decoded = await admin.auth().verifyIdToken(token)
+        req.decoded = decoded
+        next()
+    } catch (error) {
+        return res.status(401).send({ message: 'unauthorized access' })
+    }
+}
+
+const verifyTokenEmail = (req, res, next) => {
+    if (req.query.email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+    }
+    next()
+}
 
 async function run() {
     try {
@@ -118,14 +147,14 @@ async function run() {
         });
 
         // http://localhost:3000/rooms/692488a0e12a55856d20a9ea
-        app.get('/rooms/:id', async (req, res) => {
+        app.get('/rooms/:id', verifyFirebaseToken, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const room = await roomsCollection.findOne(query);
             const roomId = id.toString()
             const reviews = await reviewsCollection.find({ roomId: roomId }).toArray();
             room.reviews = reviews;
-            const bookings = await bookingCollection.find({ roomId }).toArray();
+            const bookings = await bookingCollection.find({ roomId, customer_email: req.decoded.email }).toArray();
             room.customersDetails = bookings;
             res.send(room);
         });
@@ -153,7 +182,7 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/reviews', async (req, res) => {
+        app.get('/reviews', verifyFirebaseToken, verifyTokenEmail, async (req, res) => {
             const result = await reviewsCollection.find().toArray();
             res.send(result)
         })
@@ -164,7 +193,7 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/bookings', async (req, res) => {
+        app.get('/bookings', verifyFirebaseToken, verifyTokenEmail, async (req, res) => {
             const result = await bookingCollection.find().toArray();
             res.send(result);
         })
@@ -183,7 +212,7 @@ async function run() {
             res.send(result);
         });
 
-        app.patch('/bookings/:id', async (req, res) => {
+        app.patch('/bookings/:id',verifyFirebaseToken,verifyTokenEmail, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const updatedBooking = req.body;
