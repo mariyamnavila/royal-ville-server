@@ -147,14 +147,17 @@ async function run() {
         });
 
         // http://localhost:3000/rooms/692488a0e12a55856d20a9ea
-        app.get('/rooms/:id', verifyFirebaseToken, async (req, res) => {
+        app.get('/rooms/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const room = await roomsCollection.findOne(query);
+            if (!room) {
+                return res.status(404).send({ message: 'Room not found' });
+            }
             const roomId = id.toString()
             const reviews = await reviewsCollection.find({ roomId: roomId }).toArray();
             room.reviews = reviews;
-            const bookings = await bookingCollection.find({ roomId, customer_email: req.decoded.email }).toArray();
+            const bookings = await bookingCollection.find({ roomId: roomId }).toArray();
             room.customersDetails = bookings;
             res.send(room);
         });
@@ -212,7 +215,7 @@ async function run() {
             res.send(result);
         });
 
-        app.patch('/bookings/:id',verifyFirebaseToken,verifyTokenEmail, async (req, res) => {
+        app.patch('/bookings/:id', verifyFirebaseToken, verifyTokenEmail, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const updatedBooking = req.body;
